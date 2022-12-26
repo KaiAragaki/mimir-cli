@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/KaiAragaki/mimir-cli/action"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/driver/mysql"
@@ -31,7 +32,6 @@ func openDb() *gorm.DB {
 func main() {
 
 	db := openDb()
-
 	fmt.Println(db)
 	items := []list.Item{
 		item{title: "one", desc: "list one"},
