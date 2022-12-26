@@ -28,10 +28,6 @@ func openDb() *gorm.DB {
 	return db
 }
 
-var action struct {
-	list list.Model
-}
-
 func main() {
 
 	db := openDb()
