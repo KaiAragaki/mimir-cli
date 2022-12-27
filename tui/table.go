@@ -15,13 +15,15 @@ type Table struct {
 func InitTable(s string) tea.Model {
 	items := []list.Item{
 		item{title: "Cell", desc: "Those guys in flasks"},
-		item{title: "Agent", desc: "Any kind of experimental perturbation to the cells"},
-		item{title: "Starting Condition", desc: "How many cells, for how long, in what flask?"},
+		item{title: "Agent", desc: "Any experimental perturbation"},
+		item{title: "Starting Condition", desc: "How many cells, for how long, in what flask"},
 	}
+
 	m := Table{
-		list:     list.NewModel(items, list.NewDefaultDelegate(), 8, 8),
+		list:     list.New(items, list.NewDefaultDelegate(), 0, 0),
 		selected: s,
 	}
+	m.list.SetSize(shared.WindowSize.Width, shared.WindowSize.Height)
 	return m
 }
 
