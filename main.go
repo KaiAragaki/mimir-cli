@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/KaiAragaki/mimir-cli/action"
-	"github.com/charmbracelet/bubbles/list"
+	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/KaiAragaki/mimir-cli/tui"
+
+	//"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
