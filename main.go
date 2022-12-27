@@ -33,16 +33,11 @@ func openDb() *gorm.DB {
 
 func main() {
 
-	db := openDb()
-	fmt.Println(db)
-	items := []list.Item{
-		item{title: "one", desc: "list one"},
-		item{title: "two", desc: "list two"},
-		item{title: "three", desc: "list three"},
-		item{title: "four", desc: "list four"},
-	}
-	m := model{list: list.New(items, list.NewDefaultDelegate(), 0, 0)}
-	m.list.Title = "Actions"
+	//openDb()
+
+	shared.Action = "Add"
+	shared.Table = "Cell"
+	m := tui.InitAction()
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
