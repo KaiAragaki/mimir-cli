@@ -13,7 +13,7 @@ import (
 
 func openDb() *gorm.DB {
 	connStr := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/mimir??charset=utf8mb4&parseTime=True&loc=Local",
+		"%s:%s@tcp(%s:%s)/mimir?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("MSUSER"),
 		os.Getenv("MSPASSWORD"),
 		os.Getenv("MSHOST"),
