@@ -12,31 +12,16 @@ type Action struct {
 	selected string // which item is selected?
 }
 
-type item struct {
-	title, desc string
-}
-
-func (i item) Title() string {
-	return i.title
-}
-
-func (i item) Description() string {
-	return i.desc
-}
-
-func (i item) FilterValue() string {
-	return i.title
-}
-
 func InitAction() tea.Model {
 	items := []list.Item{
 		item{title: "Add", desc: "Add an item"},
 		item{title: "Find", desc: "Look up, edit, or delete an item"},
 	}
 	m := Action{
-		list:     list.NewModel(items, list.NewDefaultDelegate(), 8, 8),
+		list:     list.NewModel(items, list.NewDefaultDelegate(), 0, 0),
 		selected: shared.Action,
 	}
+	m.list.SetSize(shared.WindowSize.Width, shared.WindowSize.Height)
 	return m
 }
 
@@ -54,6 +39,9 @@ func (m Action) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			table := InitTable(shared.Action)
 			return table.Update(shared.WindowSize)
 		}
+	case tea.WindowSizeMsg:
+		shared.WindowSize = msg
+		m.list.SetSize(shared.WindowSize.Width, shared.WindowSize.Height)
 	}
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
