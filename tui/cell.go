@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"text/template"
 
+	"github.com/KaiAragaki/mimir-cli/cell"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,6 +28,7 @@ type Cell struct {
 	fields   []field            // The fields
 	focused  int                // Which field is focused
 	ok       bool               // Are all entries valid?
+	repo     cell.Repo
 }
 
 type field struct {
@@ -78,6 +80,7 @@ Parent Name {{ .ParentName }}
 		fields:   inputs,
 		focused:  0,
 		ok:       false,
+		repo:     cell.Repo{DB: shared.DB},
 	}
 }
 
@@ -135,6 +138,8 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			// check if complete and ok here
 			if noFieldHasError(c) {
+				entry := makeCell(c)
+				c.repo.AddCell(&entry)
 			}
 		}
 		// Unfocus all inputs, then...
@@ -178,4 +183,12 @@ func noFieldHasError(c Cell) bool {
 		}
 	}
 	return true
+}
+
+func makeCell(c Cell) cell.Cell {
+	return cell.Cell{
+		CellName:   c.fields[cellName].input.Value(),
+		ParentName: c.fields[parentName].input.Value(),
+		Modifier:   c.fields[modifier].input.Value(),
+	}
 }

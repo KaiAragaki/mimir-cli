@@ -15,6 +15,6 @@ type Repo struct {
 	DB *gorm.DB
 }
 
-func (r *Repo) addCell(Cell) {
-
+func (r *Repo) AddCell(c *Cell) {
+	r.DB.Create(&c)
 }
