@@ -12,68 +12,49 @@ import (
 	//"github.com/charmbracelet/lipgloss"
 )
 
-/*
- * Ideally I want something that looks like this:
- *
- * Cell Name:   _________  |
- * Parent Name: _________  |
- * Modifier:    _________  |
- *
- * That can become this when entries are formed:
- *
- * Cell Name:   UM-UC 15   | x Only numbers, underscores, and lowercase letters allowed
- * Parent Name: umuc15     | v
- * Modifier:    lorem ip...| v
- *
- * It should only submit when all checks are good, and should make sure there isn't a duplicate
- *
- * Editing should probably happen in a separate view
- * Errors may best be viewed in a separate view - just the indicator shows up,
- * but expand to see the complaints why.
- *
- * While some modifications could be made in post (convert to lowercase etc.),
- * I think it's a better idea to either make the user convert it, or convert it
- * in front of the user's eyes (when leaving the field). Will try the first,
- * and if it's too much of a pain, try the second
- *
- * May want some dummy text in the fields to give a good example
- *
- * Could asynchronously check to see if Cell Name exists in the DB while
- * the user adds more fields (use spinner to show checking in progress)
- */
-
 type errMsg error
 
-// Field names
+// Field names ------
 const (
 	cellName = iota
 	parentName
 	modifier
 )
 
+// Define Structures ------
 type Cell struct {
 	template *template.Template // Holds the print template
-	field    []field            // The fields
+	fields   []field            // The fields
 	focused  int                // Which field is focused
+	ok       bool               // Are all entries valid?
 }
 
 type field struct {
-	input textinput.Model
-	err   error
+	input  textinput.Model
+	hasErr bool
+	errMsg string
+	vfun   func(s string) (string, bool)
 }
 
+func NewField() field {
+	return field{
+		input:  textinput.New(),
+		hasErr: true,
+		errMsg: "",
+		vfun:   func(s string) (string, bool) { return "", false },
+	}
+}
 func InitCell() tea.Model {
 	inputs := make([]field, 3)
+	for i := range inputs {
+		inputs[i] = NewField()
+	}
 
-	inputs[cellName].input = textinput.New()
 	inputs[cellName].input.Focus()
-	inputs[cellName].input.Validate = cellNameValidator
+	inputs[cellName].vfun = cellNameValidatorString
 
-	inputs[parentName].input = textinput.New()
-	inputs[parentName].input.Validate = cellNameValidator // A parent IS a cell so should be under identical strictures
-	// It might also be useful to check if the parent is equal to the child. If so, it should be blank.
+	inputs[parentName].vfun = parentNameValidatorString
 
-	inputs[modifier].input = textinput.New()
 	inputs[modifier].input.Width = 20
 
 	const cellTemplate = `
@@ -94,38 +75,50 @@ Parent Name {{ .ParentName }}
 
 	return Cell{
 		template: template,
-		field:    inputs,
+		fields:   inputs,
 		focused:  0,
+		ok:       false,
 	}
 }
 
-// ----- VALIDATORS -----
+// VALIDATORS -------------
 // BUG: Currently validators are blocking - so if something makes them upset,
 // they prevent additional input.
-func cellNameValidator(s string) error {
-	//lcAndNum := regexp.MustCompile("^[a-z0-9]*$")
-	//if !lcAndNum.MatchString(s) {
-	//	return fmt.Errorf("May only include numbers and lowercase letters")
-	//}
-
-	return nil
-}
-
 // HACK Returns a string and a bool (for checking later)
 func cellNameValidatorString(s string) (string, bool) {
 	lcAndNum := regexp.MustCompile("^[a-z0-9]*$")
 	if !lcAndNum.MatchString(s) {
-		return "May only include numbers and lowercase letters", false
+		return "May only include numbers and lowercase letters", true
 	}
 
-	return "", true
+	if s == "" {
+		return "Field must not be blank", true
+	}
+
+	return "", false
 }
+
+func parentNameValidatorString(s string) (string, bool) {
+	lcAndNum := regexp.MustCompile("^[a-z0-9]*$")
+	if !lcAndNum.MatchString(s) {
+		return "May only include numbers and lowercase letters", true
+	}
+
+	return "", false
+}
+
+func updateErrors(c *Cell) {
+	for i, v := range c.fields {
+		c.fields[i].errMsg, c.fields[i].hasErr = v.vfun(v.input.Value())
+	}
+}
+
 func (c Cell) Init() tea.Cmd {
 	return textinput.Blink // is this needed?
 }
 
 func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd = make([]tea.Cmd, len(c.field))
+	var cmds []tea.Cmd = make([]tea.Cmd, len(c.fields))
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -133,44 +126,56 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			table := InitTable(shared.Table)
 			return table.Update(table)
-		case tea.KeyTab, tea.KeyEnter, tea.KeyDown:
-			c.focused = (c.focused + 1) % len(c.field)
+		case tea.KeyTab, tea.KeyDown:
+			c.focused = (c.focused + 1) % len(c.fields)
 		case tea.KeyShiftTab, tea.KeyUp:
 			if c.focused > 0 {
 				c.focused--
 			}
+		case tea.KeyEnter:
+			// check if complete and ok here
+			if noFieldHasError(c) {
+			}
 		}
 		// Unfocus all inputs, then...
-		for i := range c.field {
-			c.field[i].input.Blur()
+		for i := range c.fields {
+			c.fields[i].input.Blur()
 		}
 		// Focus just the one
-		c.field[c.focused].input.Focus()
+		c.fields[c.focused].input.Focus()
 	}
 
-	for i := range c.field {
-		c.field[i].input, cmds[i] = c.field[i].input.Update(msg)
+	for i := range c.fields {
+		c.fields[i].input, cmds[i] = c.fields[i].input.Update(msg)
 	}
 
 	return c, nil
 }
 
 func (c Cell) View() string {
-	viewBuffer := &bytes.Buffer{}
+	viewBuffer := &bytes.Buffer{} // Might cause misfiring with submission. We'll see.
 
-	cellNameError, _ := cellNameValidatorString(c.field[cellName].input.Value())
-	parentNameError, _ := cellNameValidatorString(c.field[parentName].input.Value())
-
+	updateErrors(&c)
 	err := c.template.Execute(viewBuffer, map[string]interface{}{
-		"CellName":        c.field[cellName].input.View(),
-		"CellNameError":   errorStyle.Render(cellNameError),
-		"ParentName":      c.field[parentName].input.View(),
-		"ParentNameError": errorStyle.Render(parentNameError),
-		"Modifier":        c.field[modifier].input.View(),
+		"CellName":        c.fields[cellName].input.View(),
+		"CellNameError":   errorStyle.Render(c.fields[cellName].errMsg),
+		"ParentName":      c.fields[parentName].input.View(),
+		"ParentNameError": errorStyle.Render(c.fields[parentName].errMsg),
+		"Modifier":        c.fields[modifier].input.View(),
 	})
 	if err != nil {
-		fmt.Println("Problem!!")
+		fmt.Println("Error creating template")
 	}
-
 	return viewBuffer.String()
+}
+
+// UTILS -----
+
+func noFieldHasError(c Cell) bool {
+	for _, v := range c.fields {
+		if v.hasErr {
+			return false
+		}
+	}
+	return true
 }
