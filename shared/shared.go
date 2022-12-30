@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // VARIABLES ------
@@ -34,7 +35,9 @@ func openDb() *gorm.DB {
 		os.Getenv("MSPORT"),
 	)
 
-	db, err := gorm.Open(mysql.Open(connStr), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(connStr), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 
 	if err != nil {
 		log.Fatal(err)

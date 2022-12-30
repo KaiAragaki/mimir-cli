@@ -1,16 +1,12 @@
 package tui
 
 import (
-	"bytes"
 	"fmt"
 	"regexp"
-	"text/template"
 
 	"github.com/KaiAragaki/mimir-cli/cell"
 	"github.com/KaiAragaki/mimir-cli/shared"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	//"github.com/charmbracelet/lipgloss"
 )
 
 type errMsg error
@@ -23,33 +19,11 @@ const (
 )
 
 // Define Structures ------
-type Cell struct {
-	template *template.Template // Holds the print template
-	fields   []field            // The fields
-	focused  int                // Which field is focused
-	ok       bool               // Are all entries valid?
-	repo     cell.Repo
-}
-
-type field struct {
-	input  textinput.Model
-	hasErr bool
-	errMsg string
-	vfun   func(s string) (string, bool)
-}
-
-func NewField() field {
-	return field{
-		input:  textinput.New(),
-		hasErr: true,
-		errMsg: "",
-		vfun:   func(s string) (string, bool) { return "", false },
-	}
-}
 func InitCell() tea.Model {
 	inputs := make([]field, 3)
 	for i := range inputs {
-		inputs[i] = NewField()
+		inputs[i] = NewDefaultField()
+		inputs[i].input.SetHeight(1)
 	}
 
 	inputs[cellName].input.Focus()
@@ -57,30 +31,31 @@ func InitCell() tea.Model {
 
 	inputs[parentName].vfun = parentNameValidatorString
 
-	inputs[modifier].input.Width = 20
+	inputs[modifier].input.SetHeight(5)
 
-	const cellTemplate = `
+	const tmpl = `
 Add a cell entry:
 
-  Cell Name {{ .CellName }}
-{{ .CellNameError }}
-Parent Name {{ .ParentName }}
-{{ .ParentNameError }}
-   Modifier {{ .Modifier }}
+Cell Name
+%s
+%s
+Parent Name
+%s
+%s
+Modifier
+%s
+
+%s
+
+%s
 `
-
-	template, err := template.New("err").Parse(cellTemplate)
-
-	if err != nil {
-		fmt.Printf("Error in templating: %v", err)
-	}
-
-	return Cell{
-		template: template,
+	return Entry{
+		template: tmpl,
 		fields:   inputs,
 		focused:  0,
 		ok:       false,
-		repo:     cell.Repo{DB: shared.DB},
+		repo:     shared.DB,
+		subErr:   "",
 	}
 }
 
@@ -110,17 +85,17 @@ func parentNameValidatorString(s string) (string, bool) {
 	return "", false
 }
 
-func updateErrors(c *Cell) {
+func updateErrors(c *Entry) {
 	for i, v := range c.fields {
 		c.fields[i].errMsg, c.fields[i].hasErr = v.vfun(v.input.Value())
 	}
 }
 
-func (c Cell) Init() tea.Cmd {
-	return textinput.Blink // is this needed?
+func (c Entry) Init() tea.Cmd {
+	return nil
 }
 
-func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(c.fields))
 
 	switch msg := msg.(type) {
@@ -129,18 +104,24 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			table := InitTable(shared.Table)
 			return table.Update(table)
-		case tea.KeyTab, tea.KeyDown:
+		case tea.KeyTab:
 			c.focused = (c.focused + 1) % len(c.fields)
-		case tea.KeyShiftTab, tea.KeyUp:
+		case tea.KeyShiftTab:
 			if c.focused > 0 {
 				c.focused--
 			}
 		case tea.KeyEnter:
-			// check if complete and ok here
 			if noFieldHasError(c) {
 				entry := makeCell(c)
-				c.repo.AddCell(&entry)
+				err := c.repo.Create(&entry).Error
+				if err != nil {
+					c.subErr = errorStyle.Render(err.Error())
+				} else {
+					c.subErr = okStyle.Render("Submitted!")
+				}
 			}
+		default:
+			c.subErr = ""
 		}
 		// Unfocus all inputs, then...
 		for i := range c.fields {
@@ -157,35 +138,23 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c Cell) View() string {
-	viewBuffer := &bytes.Buffer{} // Might cause misfiring with submission. We'll see.
+func (c Entry) View() string {
 
-	updateErrors(&c)
-	err := c.template.Execute(viewBuffer, map[string]interface{}{
-		"CellName":        c.fields[cellName].input.View(),
-		"CellNameError":   errorStyle.Render(c.fields[cellName].errMsg),
-		"ParentName":      c.fields[parentName].input.View(),
-		"ParentNameError": errorStyle.Render(c.fields[parentName].errMsg),
-		"Modifier":        c.fields[modifier].input.View(),
-	})
-	if err != nil {
-		fmt.Println("Error creating template")
-	}
-	return viewBuffer.String()
+	updateErrors(&c) // Might cause misfiring with submission. We'll see.
+
+	return fmt.Sprintf(c.template,
+		c.fields[cellName].input.View(),
+		errorStyle.Render(c.fields[cellName].errMsg),
+		c.fields[parentName].input.View(),
+		errorStyle.Render(c.fields[parentName].errMsg),
+		c.fields[modifier].input.View(),
+		getEntryStatus(c),
+		c.subErr,
+	)
 }
 
 // UTILS -----
-
-func noFieldHasError(c Cell) bool {
-	for _, v := range c.fields {
-		if v.hasErr {
-			return false
-		}
-	}
-	return true
-}
-
-func makeCell(c Cell) cell.Cell {
+func makeCell(c Entry) cell.Cell {
 	return cell.Cell{
 		CellName:   c.fields[cellName].input.Value(),
 		ParentName: c.fields[parentName].input.Value(),
