@@ -22,10 +22,11 @@ type Entry struct {
 
 // Field - a single unit of an entry
 type field struct {
-	input  textarea.Model
-	hasErr bool
-	errMsg string
-	vfun   func(s string) (string, bool)
+	displayName string // What the header of the field will be displayed as
+	input       textarea.Model
+	hasErr      bool
+	errMsg      string
+	vfun        func(s string) (string, bool)
 }
 
 // Sensible defaults for fields

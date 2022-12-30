@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"regexp"
 
 	"github.com/KaiAragaki/mimir-cli/cell"
@@ -26,11 +25,14 @@ func InitCell() tea.Model {
 		inputs[i].input.SetHeight(1)
 	}
 
+	inputs[cellName].displayName = "Cell Name"
 	inputs[cellName].input.Focus()
 	inputs[cellName].vfun = cellNameValidatorString
 
+	inputs[parentName].displayName = "Parent Name"
 	inputs[parentName].vfun = parentNameValidatorString
 
+	inputs[modifier].displayName = "Modifier"
 	inputs[modifier].input.SetHeight(5)
 
 	const tmpl = `
@@ -142,15 +144,18 @@ func (c Entry) View() string {
 
 	updateErrors(&c) // Might cause misfiring with submission. We'll see.
 
-	return fmt.Sprintf(c.template,
-		c.fields[cellName].input.View(),
-		errorStyle.Render(c.fields[cellName].errMsg),
-		c.fields[parentName].input.View(),
-		errorStyle.Render(c.fields[parentName].errMsg),
-		c.fields[modifier].input.View(),
-		getEntryStatus(c),
-		c.subErr,
-	)
+	var out string
+
+	for _, v := range c.fields {
+		out = out + v.displayName + "\n" +
+			v.input.View() + "\n" +
+			errorStyle.Render(v.errMsg) + "\n"
+	}
+
+	return "Add a cell entry\n\n" +
+		out + "\n\n" +
+		getEntryStatus(c) + "\n\n" +
+		c.subErr
 }
 
 // UTILS -----
