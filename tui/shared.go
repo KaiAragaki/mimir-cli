@@ -142,7 +142,7 @@ func Validate(c *Entry) {
 		for _, w := range v.vfuns {
 			c.fields[i].errMsg, c.fields[i].hasErr = w(v.input.Value())
 			if c.fields[i].hasErr {
-				continue
+				break
 			}
 		}
 	}
