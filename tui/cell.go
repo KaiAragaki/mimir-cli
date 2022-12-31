@@ -43,13 +43,22 @@ func InitCell() tea.Model {
 	inputs[modifier].input.SetHeight(5)
 	inputs[modifier].hasErr = false
 
-	return Entry{
+	e := Entry{
 		fields:  inputs,
 		focused: 0,
 		ok:      false,
 		repo:    shared.DB,
 		subErr:  "",
 	}
+
+	// Initialize all foci so there's no pop in
+	for i := range e.fields {
+		e.fields[i].input.Blur()
+	}
+	// Focus just the one
+	e.fields[e.focused].input.Focus()
+
+	return e
 }
 
 func (c Entry) Init() tea.Cmd {
@@ -99,18 +108,29 @@ func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c Entry) View() string {
-	var out string
 	Validate(&c)
-	for _, v := range c.fields {
-		out = out + v.displayName + "\n" +
-			v.input.View() + "\n" +
-			errorStyle.Render(v.errMsg) + "\n"
+	var out, header, err string
+	for i, v := range c.fields {
+		if i == c.focused {
+			header = activeHeaderStyle.Render(v.displayName)
+		} else {
+			header = v.displayName
+		}
+
+		if v.hasErr {
+			err = errorStyle.Render(v.errMsg)
+		} else {
+			err = okStyle.Render("✓")
+		}
+
+		out = out + header + " " + err + "\n" +
+			v.input.View() + "\n\n"
 	}
 
-	return "Add a cell entry\n\n" +
-		out + "\n\n" +
+	return docStyle.Render("Add a cell entry\n\n" +
+		out +
 		getEntryStatus(c) + "\n\n" +
-		c.subErr + "\n\n"
+		c.subErr + "\n\n")
 }
 
 // UTILS ------------------

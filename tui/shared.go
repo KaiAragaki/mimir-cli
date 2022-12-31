@@ -81,11 +81,13 @@ var (
 	textAreaBlurredStyle = textarea.Style{
 		Base: lipgloss.
 			NewStyle().
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(black).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(white).
 			BorderLeft(true).
-			Foreground(yellow),
+			Foreground(white),
 	}
+	activeHeaderStyle = lipgloss.NewStyle().Foreground(yellow).Bold(true)
+	docStyle          = lipgloss.NewStyle().Margin(3)
 )
 
 func newTextarea() textarea.Model {
