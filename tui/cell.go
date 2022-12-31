@@ -80,6 +80,10 @@ func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				c.focused--
 			}
 		case tea.KeyEnter:
+			if c.focused == cellName || c.focused == parentName {
+				return c, nil
+			}
+		case tea.KeyCtrlS:
 			if noFieldHasError(c) {
 				entry := makeCell(c)
 				err := c.repo.Create(&entry).Error
