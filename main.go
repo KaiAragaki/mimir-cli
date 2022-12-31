@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/KaiAragaki/mimir-cli/tui"
 
@@ -12,7 +15,10 @@ func main() {
 	shared.Table = "Cell"
 	m := tui.InitAction()
 
-	p := tea.NewProgram(m)
+	p := tea.NewProgram(m, tea.WithAltScreen())
 
-	p.Run()
+	if _, err := p.Run(); err != nil {
+		fmt.Println("Error running program:", err)
+		os.Exit(1)
+	}
 }

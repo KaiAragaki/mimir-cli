@@ -116,9 +116,9 @@ func (c Entry) View() string {
 	var out, header, err string
 	for i, v := range c.fields {
 		if i == c.focused {
-			header = activeHeaderStyle.Render(v.displayName)
+			header = activeHeaderStyle.Render(" " + v.displayName)
 		} else {
-			header = v.displayName
+			header = headerStyle.Render(" " + v.displayName)
 		}
 
 		if v.hasErr {
@@ -131,10 +131,11 @@ func (c Entry) View() string {
 			v.input.View() + "\n\n"
 	}
 
-	return docStyle.Render("Add a cell entry\n\n" +
-		out +
-		getEntryStatus(c) + "\n\n" +
-		c.subErr + "\n\n")
+	return docStyle.Render(
+		titleStyle.Render(" Add a cell entry ") + "\n" +
+			out +
+			getEntryStatus(c) + "\n\n" +
+			c.subErr + "\n\n")
 }
 
 // UTILS ------------------

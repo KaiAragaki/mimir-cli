@@ -21,7 +21,7 @@ func InitAction() tea.Model {
 		list:     list.NewModel(items, list.NewDefaultDelegate(), 0, 0),
 		selected: shared.Action,
 	}
-	m.list.SetSize(shared.WindowSize.Width, shared.WindowSize.Height)
+	m.list.Title = "Actions"
 	return m
 }
 
@@ -41,12 +41,12 @@ func (m Action) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		shared.WindowSize = msg
-		m.list.SetSize(shared.WindowSize.Width, shared.WindowSize.Height)
+		m.list.SetSize(shared.WindowSize.Width-1, shared.WindowSize.Height-2)
 	}
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd
 }
 
 func (m Action) View() string {
-	return shared.DocStyle.Render(m.list.View())
+	return docStyle.Render(m.list.View())
 }

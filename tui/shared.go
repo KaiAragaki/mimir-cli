@@ -68,12 +68,12 @@ var (
 	continueStyle        = lipgloss.NewStyle().Foreground(darkGray)
 	cursorStyle          = lipgloss.NewStyle().Foreground(white)
 	cursorLineStyle      = lipgloss.NewStyle().Background(lipgloss.Color("57")).Foreground(lipgloss.Color("230"))
-	errorStyle           = lipgloss.NewStyle().Foreground(red)
+	errorStyle           = lipgloss.NewStyle().Foreground(darkGray).Italic(true)
 	okStyle              = lipgloss.NewStyle().Foreground(green)
 	textAreaFocusedStyle = textarea.Style{
 		Base: lipgloss.
 			NewStyle().
-			BorderStyle(lipgloss.RoundedBorder()).
+			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(yellow).
 			BorderLeft(true).
 			Foreground(yellow),
@@ -86,8 +86,21 @@ var (
 			BorderLeft(true).
 			Foreground(white),
 	}
-	activeHeaderStyle = lipgloss.NewStyle().Foreground(yellow).Bold(true)
-	docStyle          = lipgloss.NewStyle().Margin(3)
+
+	headerStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(white).
+			BorderLeft(true)
+
+	activeHeaderStyle = headerStyle.Copy().
+				Foreground(yellow).Bold(true).
+				BorderForeground(yellow)
+
+	titleStyle = lipgloss.NewStyle().
+			Background(yellow).
+			Foreground(black).
+			Margin(0, 2, 3, 2)
+	docStyle = lipgloss.NewStyle().Margin(1)
 )
 
 func newTextarea() textarea.Model {

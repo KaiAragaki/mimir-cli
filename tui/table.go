@@ -23,7 +23,7 @@ func InitTable(s string) tea.Model {
 		list:     list.New(items, list.NewDefaultDelegate(), 0, 0),
 		selected: s,
 	}
-	m.list.SetSize(shared.WindowSize.Width, shared.WindowSize.Height)
+	m.list.Title = "Tables"
 	return m
 }
 
@@ -33,6 +33,7 @@ func (m Table) Init() tea.Cmd {
 
 func (m Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	m.list.SetSize(shared.WindowSize.Width-1, shared.WindowSize.Height-2)
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -50,5 +51,5 @@ func (m Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Table) View() string {
-	return shared.DocStyle.Render(m.list.View())
+	return docStyle.Render(m.list.View())
 }
