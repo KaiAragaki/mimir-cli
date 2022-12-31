@@ -1,12 +1,12 @@
 package tui
 
 import (
-	"regexp"
-
-	"github.com/KaiAragaki/mimir-cli/cell"
+	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+var debug string
 
 type errMsg error
 
@@ -27,69 +27,28 @@ func InitCell() tea.Model {
 
 	inputs[cellName].displayName = "Cell Name"
 	inputs[cellName].input.Focus()
-	inputs[cellName].vfun = cellNameValidatorString
+	inputs[cellName].vfuns = append(
+		inputs[cellName].vfuns,
+		valIsBlank,
+		valIsntLcAndNum,
+	)
 
 	inputs[parentName].displayName = "Parent Name"
-	inputs[parentName].vfun = parentNameValidatorString
+	inputs[parentName].vfuns = append(
+		inputs[parentName].vfuns,
+		valIsntLcAndNum,
+	)
 
 	inputs[modifier].displayName = "Modifier"
 	inputs[modifier].input.SetHeight(5)
+	inputs[modifier].hasErr = false
 
-	const tmpl = `
-Add a cell entry:
-
-Cell Name
-%s
-%s
-Parent Name
-%s
-%s
-Modifier
-%s
-
-%s
-
-%s
-`
 	return Entry{
-		template: tmpl,
-		fields:   inputs,
-		focused:  0,
-		ok:       false,
-		repo:     shared.DB,
-		subErr:   "",
-	}
-}
-
-// VALIDATORS -------------
-// BUG: Currently validators are blocking - so if something makes them upset,
-// they prevent additional input.
-// HACK Returns a string and a bool (for checking later)
-func cellNameValidatorString(s string) (string, bool) {
-	lcAndNum := regexp.MustCompile("^[a-z0-9]*$")
-	if !lcAndNum.MatchString(s) {
-		return "May only include numbers and lowercase letters", true
-	}
-
-	if s == "" {
-		return "Field must not be blank", true
-	}
-
-	return "", false
-}
-
-func parentNameValidatorString(s string) (string, bool) {
-	lcAndNum := regexp.MustCompile("^[a-z0-9]*$")
-	if !lcAndNum.MatchString(s) {
-		return "May only include numbers and lowercase letters", true
-	}
-
-	return "", false
-}
-
-func updateErrors(c *Entry) {
-	for i, v := range c.fields {
-		c.fields[i].errMsg, c.fields[i].hasErr = v.vfun(v.input.Value())
+		fields:  inputs,
+		focused: 0,
+		ok:      false,
+		repo:    shared.DB,
+		subErr:  "",
 	}
 }
 
@@ -99,7 +58,6 @@ func (c Entry) Init() tea.Cmd {
 
 func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(c.fields))
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -141,11 +99,8 @@ func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c Entry) View() string {
-
-	updateErrors(&c) // Might cause misfiring with submission. We'll see.
-
 	var out string
-
+	Validate(&c)
 	for _, v := range c.fields {
 		out = out + v.displayName + "\n" +
 			v.input.View() + "\n" +
@@ -155,12 +110,14 @@ func (c Entry) View() string {
 	return "Add a cell entry\n\n" +
 		out + "\n\n" +
 		getEntryStatus(c) + "\n\n" +
-		c.subErr
+		c.subErr + "\n\n"
 }
 
-// UTILS -----
-func makeCell(c Entry) cell.Cell {
-	return cell.Cell{
+// UTILS ------------------
+
+// Constructor of db entry
+func makeCell(c Entry) db.Cell {
+	return db.Cell{
 		CellName:   c.fields[cellName].input.Value(),
 		ParentName: c.fields[parentName].input.Value(),
 		Modifier:   c.fields[modifier].input.Value(),

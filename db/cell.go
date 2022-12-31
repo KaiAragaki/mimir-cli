@@ -1,4 +1,4 @@
-package cell
+package db
 
 import (
 	"gorm.io/gorm"
@@ -9,10 +9,6 @@ type Cell struct {
 	CellName   string
 	ParentName string
 	Modifier   string
-}
-
-type Repo struct {
-	DB *gorm.DB
 }
 
 func (r *Repo) AddCell(c *Cell) {

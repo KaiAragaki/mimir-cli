@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"regexp"
+
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,12 +14,11 @@ import (
 
 // Entry
 type Entry struct {
-	template string  // Holds the print template
-	fields   []field // The fields
-	focused  int     // Which field is focused
-	ok       bool    // Are all entries valid?
-	repo     *gorm.DB
-	subErr   string // What error (if any) came from submitting to DB?
+	fields  []field // The fields
+	focused int     // Which field is focused
+	ok      bool    // Are all entries valid?
+	repo    *gorm.DB
+	subErr  string // What error (if any) came from submitting to DB?
 }
 
 // Field - a single unit of an entry
@@ -26,7 +27,7 @@ type field struct {
 	input       textarea.Model
 	hasErr      bool
 	errMsg      string
-	vfun        func(s string) (string, bool)
+	vfuns       []func(s string) (string, bool)
 }
 
 // Sensible defaults for fields
@@ -36,12 +37,14 @@ func NewDefaultField() field {
 	ta.ShowLineNumbers = false
 	ta.Prompt = " "
 	ta.BlurredStyle = textAreaBlurredStyle
+	//func(s string) (string, bool) { return "", false }
+	var fns []func(s string) (string, bool)
 
 	return field{
 		input:  ta,
 		hasErr: true,
 		errMsg: "",
-		vfun:   func(s string) (string, bool) { return "", false },
+		vfuns:  fns,
 	}
 }
 
@@ -132,4 +135,40 @@ func getEntryStatus(c Entry) string {
 	} else {
 		return errorStyle.Render("Entry not ready to be submitted.")
 	}
+}
+
+func Validate(c *Entry) {
+	for i, v := range c.fields {
+		for _, w := range v.vfuns {
+			c.fields[i].errMsg, c.fields[i].hasErr = w(v.input.Value())
+			if c.fields[i].hasErr {
+				continue
+			}
+		}
+	}
+}
+
+// Validators
+
+func valIsBlank(s string) (string, bool) {
+	if s == "" {
+		return "Field must not be blank", true
+	}
+	return "", false
+}
+
+func valIsntLcAndNum(s string) (string, bool) {
+	lcAndNum := regexp.MustCompile("^[a-z0-9]*$")
+	if !lcAndNum.MatchString(s) {
+		return "May only include numbers and lowercase letters", true
+	}
+	return "", false
+}
+
+func valIsntLcNumUnderDash(s string) (string, bool) {
+	lcNumUnderScoreDash := regexp.MustCompile("^[a-z0-9_-]*$")
+	if !lcNumUnderScoreDash.MatchString(s) {
+		return "May only include numbers, lowercase letters, underscores, and dashes", true
+	}
+	return "", false
 }

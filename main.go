@@ -1,13 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/KaiAragaki/mimir-cli/tui"
 
-	//"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"os"
 )
 
 func main() {
@@ -15,10 +12,7 @@ func main() {
 	shared.Table = "Cell"
 	m := tui.InitAction()
 
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	p := tea.NewProgram(m)
 
-	if _, err := p.Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	}
+	p.Run()
 }
