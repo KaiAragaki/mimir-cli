@@ -8,8 +8,8 @@ import (
 // Field names -----
 const (
 	agentName = iota
-	concentration
-	concentrationUnits
+	amount
+	amountUnit
 	agentDuration
 	agentStartSincePlate
 )
@@ -30,12 +30,20 @@ func InitAgent() tea.Model {
 		valIsntLcNumUnderDash,
 	)
 
-	inputs[concentration].displayName = "Concentration"
+	inputs[amount].displayName = "Concentration"
+	inputs[amount].vfuns = append(
+		inputs[amount].vfuns,
+		valIsBlank,
+		valIsntNum,
+	)
 
-	inputs[concentrationUnits].displayName = "Concentration Units"
+	inputs[amountUnit].displayName = "Concentration Units"
+	inputs[amountUnit].vfuns = append(
+		inputs[amountUnit].vfuns,
+		valIsBlank,
+	)
 
 	inputs[agentDuration].displayName = "Agent Duration"
-
 	inputs[agentStartSincePlate].displayName = "Agent Start Since Plating"
 
 	return Entry{
