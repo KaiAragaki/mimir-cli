@@ -4,7 +4,6 @@ import (
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"gorm.io/gorm"
 )
 
