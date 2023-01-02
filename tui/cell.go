@@ -4,6 +4,7 @@ import (
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	tea "github.com/charmbracelet/bubbletea"
+	"gorm.io/gorm"
 )
 
 var debug string
@@ -18,6 +19,11 @@ const (
 )
 
 // Define Structures ------
+
+type Cell struct {
+	Entry
+}
+
 func InitCell() tea.Model {
 	inputs := make([]field, 3)
 	for i := range inputs {
@@ -43,12 +49,14 @@ func InitCell() tea.Model {
 	inputs[modifier].input.SetHeight(5)
 	inputs[modifier].hasErr = false
 
-	e := Entry{
-		fields:  inputs,
-		focused: 0,
-		ok:      false,
-		repo:    shared.DB,
-		subErr:  "",
+	e := Cell{
+		Entry: Entry{
+			fields:  inputs,
+			focused: 0,
+			ok:      false,
+			repo:    shared.DB,
+			subErr:  "",
+		},
 	}
 
 	// Initialize all foci so there's no pop in
@@ -61,11 +69,11 @@ func InitCell() tea.Model {
 	return e
 }
 
-func (c Entry) Init() tea.Cmd {
+func (c Cell) Init() tea.Cmd {
 	return nil
 }
 
-func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(c.fields))
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -80,12 +88,15 @@ func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				c.focused--
 			}
 		case tea.KeyEnter:
-			if c.focused == cellName || c.focused == parentName {
+			// Don't newline in fields that are just 1 line tall
+			// It's confusing!
+			if c.fields[c.focused].input.Height() == 1 {
 				return c, nil
 			}
 		case tea.KeyCtrlS:
-			if noFieldHasError(c) {
-				entry := makeCell(c)
+			if noFieldHasError(c.Entry) {
+				// TODO implement generalized makeEntry
+				entry := makeCell(c.Entry)
 				err := c.repo.Create(&entry).Error
 				if err != nil {
 					c.subErr = errorStyle.Render(err.Error())
@@ -94,6 +105,8 @@ func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		default:
+			// Only keep around submission errors
+			// until the next key that could possibly fix it is pressed
 			c.subErr = ""
 		}
 		// Unfocus all inputs, then...
@@ -111,8 +124,8 @@ func (c Entry) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c Entry) View() string {
-	Validate(&c)
+func (c Cell) View() string {
+	Validate(&c.Entry)
 	var out, header, err string
 	for i, v := range c.fields {
 		if i == c.focused {
@@ -134,7 +147,7 @@ func (c Entry) View() string {
 	return docStyle.Render(
 		titleStyle.Render(" Add a cell entry ") + "\n" +
 			out +
-			getEntryStatus(c) + "\n\n" +
+			getEntryStatus(c.Entry) + "\n\n" +
 			c.subErr + "\n\n")
 }
 
@@ -143,6 +156,7 @@ func (c Entry) View() string {
 // Constructor of db entry
 func makeCell(c Entry) db.Cell {
 	return db.Cell{
+		Model:      gorm.Model{},
 		CellName:   c.fields[cellName].input.Value(),
 		ParentName: c.fields[parentName].input.Value(),
 		Modifier:   c.fields[modifier].input.Value(),

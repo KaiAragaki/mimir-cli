@@ -1,22 +1,30 @@
 package tui
 
 import (
+	"fmt"
+
+	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	tea "github.com/charmbracelet/bubbletea"
+	"gorm.io/gorm"
 )
 
 // Field names -----
 const (
 	agentName = iota
-	amount
-	amountUnit
+	amountWithUnits
 	agentDuration
 	agentStartSincePlate
 )
 
 // Structures -----
+
+type Agent struct {
+	Entry
+}
+
 func InitAgent() tea.Model {
-	inputs := make([]field, 5)
+	inputs := make([]field, 4)
 	for i := range inputs {
 		inputs[i] = NewDefaultField()
 		inputs[i].input.SetHeight(1)
@@ -30,29 +38,147 @@ func InitAgent() tea.Model {
 		valIsntLcNumUnderDash,
 	)
 
-	inputs[amount].displayName = "Concentration"
-	inputs[amount].vfuns = append(
-		inputs[amount].vfuns,
+	inputs[amountWithUnits].displayName = "Amount with Units"
+	inputs[amountWithUnits].vfuns = append(
+		inputs[amountWithUnits].vfuns,
 		valIsBlank,
-		valIsntNum,
-	)
-
-	inputs[amountUnit].displayName = "Concentration Units"
-	inputs[amountUnit].vfuns = append(
-		inputs[amountUnit].vfuns,
-		valIsBlank,
+		valMultiSlash,
 	)
 
 	inputs[agentDuration].displayName = "Agent Duration"
-	inputs[agentStartSincePlate].displayName = "Agent Start Since Plating"
+	inputs[agentDuration].vfuns = append(
+		inputs[agentDuration].vfuns,
+		valIsBlank,
+		valIsntTimeUnit,
+		valRepeatLetters,
+		valStartsWithChar,
+		valNoTimeUnit,
+	)
 
-	return Entry{
-		fields:  inputs,
-		focused: 0,
-		ok:      false,
-		repo:    shared.DB,
-		subErr:  "",
+	inputs[agentStartSincePlate].displayName = "Agent Start Since Plating"
+	inputs[agentStartSincePlate].vfuns = inputs[agentDuration].vfuns
+
+	e := Agent{
+		Entry: Entry{
+			fields:  inputs,
+			focused: 0,
+			ok:      false,
+			repo:    shared.DB,
+			subErr:  "",
+		},
 	}
+
+	// Initialize all foci so there's no pop in
+	for i := range e.fields {
+		e.fields[i].input.Blur()
+	}
+	// Focus just the one
+	e.fields[e.focused].input.Focus()
+
+	return e
 }
 
-// UTILS -----
+func (a Agent) Init() tea.Cmd {
+	return nil
+}
+
+func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd = make([]tea.Cmd, len(a.fields))
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyCtrlC, tea.KeyEsc:
+			table := InitTable(shared.Table)
+			return table.Update(table)
+		case tea.KeyTab:
+			a.focused = (a.focused + 1) % len(a.fields)
+		case tea.KeyShiftTab:
+			if a.focused > 0 {
+				a.focused--
+			}
+		case tea.KeyEnter:
+			// Don't newline in fields that are just 1 line tall
+			// It's confusing!
+			if a.fields[a.focused].input.Height() == 1 {
+				return a, nil
+			}
+		case tea.KeyCtrlS:
+			if noFieldHasError(a.Entry) {
+				// TODO implement generalized makeEntry
+				entry := makeCell(a.Entry)
+				err := a.repo.Create(&entry).Error
+				if err != nil {
+					a.subErr = errorStyle.Render(err.Error())
+				} else {
+					a.subErr = okStyle.Render("Submitted!")
+				}
+			}
+		default:
+			// Only keep around submission errors
+			// until the next key that could possibly fix it is pressed
+			a.subErr = ""
+		}
+		// Unfocus all inputs, then...
+		for i := range a.fields {
+			a.fields[i].input.Blur()
+		}
+		// Focus just the one
+		a.fields[a.focused].input.Focus()
+	}
+
+	for i := range a.fields {
+		a.fields[i].input, cmds[i] = a.fields[i].input.Update(msg)
+	}
+
+	return a, nil
+}
+
+func (a Agent) View() string {
+	Validate(&a.Entry)
+	var out, header, err string
+	for i, v := range a.fields {
+		if i == a.focused {
+			header = activeHeaderStyle.Render(" " + v.displayName)
+		} else {
+			header = headerStyle.Render(" " + v.displayName)
+		}
+
+		if v.hasErr {
+			err = errorStyle.Render(v.errMsg)
+		} else {
+			if v.displayName == "Amount with Units" {
+				parsedUnitsVal, parsedUnitsUnit := parseUnits(v.input.Value())
+				out := fmt.Sprintf("%.5v %s", parsedUnitsVal, parsedUnitsUnit)
+				err = okStyle.Render("✓ Will be converted to " + out)
+			} else if v.displayName == "Agent Duration" || v.displayName == "Agent Start Since Plating" {
+				parsedTime := parseTime(v.input.Value())
+				out := fmt.Sprintf("%.5v", parsedTime)
+				err = okStyle.Render("✓ Will be converted to " + out + " seconds")
+			} else {
+				err = okStyle.Render("✓")
+			}
+
+		}
+
+		out = out + header + " " + err + "\n" +
+			v.input.View() + "\n\n"
+	}
+
+	return docStyle.Render(
+		titleStyle.Render(" Add a cell entry ") + "\n" +
+			out +
+			getEntryStatus(a.Entry) + "\n\n" +
+			a.subErr + "\n\n")
+}
+
+func makeAgent(e Entry) db.Agent {
+	amt, amtUnits := parseUnits(e.fields[amountWithUnits].input.Value())
+	return db.Agent{
+		Model:                gorm.Model{},
+		AgentName:            e.fields[agentName].input.Value(),
+		Concentration:        amt,
+		ConcentrationUnits:   amtUnits,
+		AgentDuration:        parseTime(e.fields[agentDuration].input.Value()),
+		AgentStartSincePlate: parseTime(e.fields[agentStartSincePlate].input.Value()),
+	}
+}

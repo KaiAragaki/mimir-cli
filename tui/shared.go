@@ -1,10 +1,6 @@
 package tui
 
 import (
-	"fmt"
-	"regexp"
-	"strconv"
-
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,6 +17,12 @@ type Entry struct {
 	ok      bool    // Are all entries valid?
 	repo    *gorm.DB
 	subErr  string // What error (if any) came from submitting to DB?
+}
+
+type Enterable interface {
+	Init() tea.Cmd
+	Update(tea.Msg) (tea.Model, tea.Cmd)
+	View() string
 }
 
 // Field - a single unit of an entry
@@ -133,6 +135,8 @@ func InitForm(tableName string) tea.Model {
 	switch tableName {
 	case "Cell":
 		return InitCell()
+	case "Agent":
+		return InitAgent()
 	}
 	return InitTable(shared.Table)
 }
