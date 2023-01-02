@@ -105,7 +105,7 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlS:
 			if noFieldHasError(a.Entry) {
 				// TODO implement generalized makeEntry
-				entry := makeCell(a.Entry)
+				entry := makeAgent(a.Entry)
 				err := a.repo.Create(&entry).Error
 				if err != nil {
 					a.subErr = errorStyle.Render(err.Error())
@@ -176,8 +176,8 @@ func makeAgent(e Entry) db.Agent {
 	return db.Agent{
 		Model:                gorm.Model{},
 		AgentName:            e.fields[agentName].input.Value(),
-		Concentration:        amt,
-		ConcentrationUnits:   amtUnits,
+		Amount:               amt,
+		AmountUnits:          amtUnits,
 		AgentDuration:        parseTime(e.fields[agentDuration].input.Value()),
 		AgentStartSincePlate: parseTime(e.fields[agentStartSincePlate].input.Value()),
 	}
