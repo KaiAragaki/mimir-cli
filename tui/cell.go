@@ -1,8 +1,11 @@
 package tui
 
 import (
+	"strconv"
+
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
 )
@@ -24,7 +27,7 @@ type Cell struct {
 	Entry
 }
 
-func InitCell() tea.Model {
+func InitCell(findMode bool) tea.Model {
 	inputs := make([]field, 3)
 	for i := range inputs {
 		inputs[i] = NewDefaultField()
@@ -36,9 +39,12 @@ func InitCell() tea.Model {
 	inputs[cellName].input.Placeholder = "umuc6src54"
 	inputs[cellName].vfuns = append(
 		inputs[cellName].vfuns,
-		valIsBlank,
 		valIsntLcAndNum,
 	)
+
+	if !findMode {
+		inputs[cellName].vfuns = append(inputs[cellName].vfuns, valIsBlank)
+	}
 
 	inputs[parentName].displayName = "Parent Name"
 	inputs[parentName].input.Placeholder = "umuc6"
@@ -53,13 +59,17 @@ func InitCell() tea.Model {
 	inputs[modifier].input.SetHeight(5)
 	inputs[modifier].hasErr = false
 
+	resTable := NewDefaultTable(inputs)
+
 	e := Cell{
 		Entry: Entry{
-			fields:  inputs,
-			focused: 0,
-			ok:      false,
-			repo:    shared.DB,
-			subErr:  "",
+			fields:   inputs,
+			focused:  0,
+			ok:       false,
+			repo:     shared.DB,
+			subErr:   "",
+			findMode: findMode,
+			res:      resTable,
 		},
 	}
 
@@ -101,7 +111,19 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if noFieldHasError(c.Entry) {
 				// TODO implement generalized makeEntry
 				entry := makeCell(c.Entry)
-				err := c.repo.Create(&entry).Error
+				var err error
+				if !c.findMode {
+					err = c.repo.Create(&entry).Error
+				} else {
+					var cell []db.Cell
+					shared.DB.Where(entry).First(&cell)
+					var rows []table.Row
+					for _, v := range cell {
+						row := []string{strconv.FormatUint(uint64(v.ID), 10), v.CellName, v.ParentName, v.Modifier}
+						rows = append(rows, row)
+					}
+					c.res.SetRows(rows)
+				}
 				if err != nil {
 					c.subErr = errorStyle.Render(err.Error())
 				} else {
@@ -125,12 +147,22 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		c.fields[i].input, cmds[i] = c.fields[i].input.Update(msg)
 	}
 
+	if !c.findMode {
+		var newRow []string
+		newRow = append(newRow, "")
+		for _, v := range c.fields {
+			newRow = append(newRow, v.input.Value())
+		}
+
+		c.res.SetRows([]table.Row{newRow})
+	}
+
 	return c, nil
 }
 
 func (c Cell) View() string {
 	Validate(&c.Entry)
-	var out, header, err string
+	var out, header, err, action string
 	for i, v := range c.fields {
 		if i == c.focused {
 			header = activeHeaderStyle.Render(" " + v.displayName)
@@ -138,21 +170,33 @@ func (c Cell) View() string {
 			header = headerStyle.Render(" " + v.displayName)
 		}
 
-		if v.hasErr {
-			err = errorStyle.Render(v.errMsg)
+		if !c.findMode {
+			if v.hasErr {
+				err = errorStyle.Render(v.errMsg)
+			} else {
+				err = okStyle.Render("✓")
+			}
 		} else {
-			err = okStyle.Render("✓")
+			err = ""
 		}
 
 		out = out + header + " " + err + "\n" +
 			v.input.View() + "\n\n"
 	}
 
+	if c.findMode {
+		action = "Find"
+	} else {
+		action = "Add"
+	}
+
 	return docStyle.Render(
-		titleStyle.Render(" Add a cell entry ") + "\n" +
+		titleStyle.Render(" "+action+" a cell entry ") + "\n" +
 			out +
 			getEntryStatus(c.Entry) + "\n\n" +
-			c.subErr + "\n\n")
+			c.subErr + "\n\n" +
+			c.res.View(),
+	)
 }
 
 // UTILS ------------------

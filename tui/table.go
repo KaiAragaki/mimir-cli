@@ -39,8 +39,13 @@ func (m Table) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, shared.Keymap.Enter):
 			shared.Table = m.list.SelectedItem().FilterValue()
-			form := InitForm(shared.Table)
-			return form.Update(shared.WindowSize)
+			var model tea.Model
+			if shared.Action == "Add" {
+				model = InitForm(shared.Table, false)
+			} else if shared.Action == "Find" {
+				model = InitForm(shared.Table, true)
+			}
+			return model.Update(shared.WindowSize)
 		case key.Matches(msg, shared.Keymap.Back):
 			action := InitAction()
 			return action.Update(shared.WindowSize)

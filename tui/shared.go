@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
@@ -11,17 +12,13 @@ import (
 
 // Entry
 type Entry struct {
-	fields  []field // The fields
-	focused int     // Which field is focused
-	ok      bool    // Are all entries valid?
-	repo    *gorm.DB
-	subErr  string // What error (if any) came from submitting to DB?
-}
-
-type Enterable interface {
-	Init() tea.Cmd
-	Update(tea.Msg) (tea.Model, tea.Cmd)
-	View() string
+	repo     *gorm.DB
+	fields   []field     // The fields
+	focused  int         // Which field is focused
+	ok       bool        // Are all entries valid?
+	subErr   string      // What error (if any) came from submitting to DB?
+	findMode bool        // Should blank entries be ignored?
+	res      table.Model // Stores find results or entry results
 }
 
 // Field - a single unit of an entry
@@ -42,15 +39,28 @@ func NewDefaultField() field {
 	ta.BlurredStyle = textAreaBlurredStyle
 	ta.BlurredStyle.Placeholder = placeholderStyle
 	ta.FocusedStyle.Placeholder = placeholderStyle
-	//func(s string) (string, bool) { return "", false }
 	var fns []func(s string) (string, bool)
 
 	return field{
-		input:  ta,
-		hasErr: true,
-		errMsg: "",
-		vfuns:  fns,
+		displayName: "",
+		input:       ta,
+		hasErr:      true,
+		errMsg:      "",
+		vfuns:       fns,
 	}
+}
+
+// Sensible defaults for results table
+func NewDefaultTable(i []field) table.Model {
+	columns := []table.Column{
+		{Title: "id", Width: 4},
+	}
+	for _, v := range i {
+		col := table.Column{Title: v.displayName, Width: len(v.displayName) + 4}
+		columns = append(columns, col)
+	}
+	t := table.New(table.WithColumns(columns))
+	return t
 }
 
 // FUNCTIONS ----------
@@ -79,14 +89,14 @@ func (i item) FilterValue() string {
 
 // A function calls the correct Init* function based on the table name selected
 // I'm sure there's a better way to do this (generics?) but I'm too dumb
-func InitForm(tableName string) tea.Model {
+func InitForm(tableName string, findMode bool) tea.Model {
 	switch tableName {
 	case "Cell":
-		return InitCell()
+		return InitCell(findMode)
 	case "Agent":
-		return InitAgent()
+		return InitAgent(findMode)
 	case "Base Condition":
-		return InitBaseCondition()
+		return InitBaseCondition(findMode)
 	}
 	return InitTable(shared.Table)
 }
@@ -103,9 +113,8 @@ func noFieldHasError(c Entry) bool {
 func getEntryStatus(c Entry) string {
 	if noFieldHasError(c) {
 		return okStyle.Render("Lookin' good!")
-	} else {
-		return errorStyle.Render("Entry not ready to be submitted.")
 	}
+	return errorStyle.Render("Entry not ready to be submitted.")
 }
 
 func Validate(c *Entry) {

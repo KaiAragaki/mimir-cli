@@ -23,7 +23,7 @@ type BaseCondition struct {
 	Entry
 }
 
-func InitBaseCondition() tea.Model {
+func InitBaseCondition(findMode bool) tea.Model {
 	inputs := make([]field, 5)
 	for i := range inputs {
 		inputs[i] = NewDefaultField()

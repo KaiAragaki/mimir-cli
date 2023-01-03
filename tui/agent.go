@@ -23,7 +23,7 @@ type Agent struct {
 	Entry
 }
 
-func InitAgent() tea.Model {
+func InitAgent(findMode bool) tea.Model {
 	inputs := make([]field, 4)
 	for i := range inputs {
 		inputs[i] = NewDefaultField()
