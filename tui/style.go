@@ -9,6 +9,7 @@ const (
 	white     = lipgloss.Color("#FFFFFF")
 	purple    = lipgloss.Color("#7f12c7")
 	darkGray  = lipgloss.Color("#767676")
+	vDarkGray = lipgloss.Color("#555555")
 	red       = lipgloss.Color("#FF0000")
 	green     = lipgloss.Color("#00FF00")
 	lightBlue = lipgloss.Color("#5C8DFF")
@@ -18,13 +19,15 @@ const (
 )
 
 var (
-	activeInputStyle     = lipgloss.NewStyle().Foreground(white).Background(purple)
-	inactiveInputStyle   = lipgloss.NewStyle().Foreground(purple)
-	continueStyle        = lipgloss.NewStyle().Foreground(darkGray)
-	cursorStyle          = lipgloss.NewStyle().Foreground(white)
-	cursorLineStyle      = lipgloss.NewStyle().Background(lipgloss.Color("57")).Foreground(lipgloss.Color("230"))
-	errorStyle           = lipgloss.NewStyle().Foreground(darkGray).Italic(true)
-	okStyle              = lipgloss.NewStyle().Foreground(green)
+	activeInputStyle   = lipgloss.NewStyle().Foreground(white).Background(purple)
+	inactiveInputStyle = lipgloss.NewStyle().Foreground(purple)
+	continueStyle      = lipgloss.NewStyle().Foreground(darkGray)
+	cursorStyle        = lipgloss.NewStyle().Foreground(white)
+	cursorLineStyle    = lipgloss.NewStyle().Background(lipgloss.Color("57")).Foreground(lipgloss.Color("230"))
+	errorStyle         = lipgloss.NewStyle().Foreground(darkGray).Italic(true)
+	okStyle            = lipgloss.NewStyle().Foreground(green)
+	placeholderStyle   = lipgloss.NewStyle().Foreground(vDarkGray)
+
 	textAreaFocusedStyle = textarea.Style{
 		Base: lipgloss.
 			NewStyle().

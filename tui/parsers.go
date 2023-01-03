@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -58,8 +57,6 @@ func makeSI(s string) (float32, string) {
 			return units[s[0:1]], "mol"
 		} else if isGram {
 			return units[s[0:1]] / 1000, "kg" // kg - not gram - is SI
-		} else {
-			fmt.Println(fmt.Errorf("Unknown unit multiplier"))
 		}
 	}
 	// Checks that should be done

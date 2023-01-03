@@ -40,6 +40,8 @@ func NewDefaultField() field {
 	ta.ShowLineNumbers = false
 	ta.Prompt = " "
 	ta.BlurredStyle = textAreaBlurredStyle
+	ta.BlurredStyle.Placeholder = placeholderStyle
+	ta.FocusedStyle.Placeholder = placeholderStyle
 	//func(s string) (string, bool) { return "", false }
 	var fns []func(s string) (string, bool)
 
@@ -83,6 +85,8 @@ func InitForm(tableName string) tea.Model {
 		return InitCell()
 	case "Agent":
 		return InitAgent()
+	case "Base Condition":
+		return InitBaseCondition()
 	}
 	return InitTable(shared.Table)
 }

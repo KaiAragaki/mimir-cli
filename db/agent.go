@@ -6,9 +6,9 @@ import (
 
 type Agent struct {
 	gorm.Model
-	AgentName            string
+	AgentName            string  `gorm:"size:255"`
 	Amount               float32 // SI
-	AmountUnits          string  // SI
+	AmountUnits          string  `gorm:"size:255"` // SI
 	AgentDuration        int32   // time in seconds
 	AgentStartSincePlate int32   // time in seconds
 }

@@ -6,7 +6,7 @@ import (
 
 type Cell struct {
 	gorm.Model
-	CellName   string
+	CellName   string `gorm:"size:255"`
 	ParentName string
 	Modifier   string
 }

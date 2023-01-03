@@ -16,7 +16,7 @@ func InitTable(s string) tea.Model {
 	items := []list.Item{
 		item{title: "Cell", desc: "Those guys in flasks"},
 		item{title: "Agent", desc: "Any experimental perturbation"},
-		item{title: "Starting Condition", desc: "How many cells, for how long, in what flask"},
+		item{title: "Base Condition", desc: "How many cells, for how long, in what flask"},
 	}
 
 	m := Table{

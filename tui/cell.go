@@ -33,6 +33,7 @@ func InitCell() tea.Model {
 
 	inputs[cellName].displayName = "Cell Name"
 	inputs[cellName].input.Focus()
+	inputs[cellName].input.Placeholder = "umuc6src54"
 	inputs[cellName].vfuns = append(
 		inputs[cellName].vfuns,
 		valIsBlank,
@@ -40,12 +41,15 @@ func InitCell() tea.Model {
 	)
 
 	inputs[parentName].displayName = "Parent Name"
+	inputs[parentName].input.Placeholder = "umuc6"
 	inputs[parentName].vfuns = append(
 		inputs[parentName].vfuns,
 		valIsntLcAndNum,
 	)
 
+	inputs[modifier].input.SetWidth(80)
 	inputs[modifier].displayName = "Modifier"
+	inputs[modifier].input.Placeholder = `Cells were transduced with...`
 	inputs[modifier].input.SetHeight(5)
 	inputs[modifier].hasErr = false
 

@@ -32,6 +32,7 @@ func InitAgent() tea.Model {
 
 	inputs[agentName].displayName = "Agent Name"
 	inputs[agentName].input.Focus()
+	inputs[agentName].input.Placeholder = "saracatinib"
 	inputs[agentName].vfuns = append(
 		inputs[agentName].vfuns,
 		valIsBlank,
@@ -39,13 +40,16 @@ func InitAgent() tea.Model {
 	)
 
 	inputs[amountWithUnits].displayName = "Amount with Units"
+	inputs[amountWithUnits].input.Placeholder = "100nM"
 	inputs[amountWithUnits].vfuns = append(
 		inputs[amountWithUnits].vfuns,
 		valIsBlank,
 		valMultiSlash,
+		valStartsWithChar,
 	)
 
 	inputs[agentDuration].displayName = "Agent Duration"
+	inputs[amountWithUnits].input.Placeholder = "1d2m5s"
 	inputs[agentDuration].vfuns = append(
 		inputs[agentDuration].vfuns,
 		valIsBlank,
@@ -56,6 +60,7 @@ func InitAgent() tea.Model {
 	)
 
 	inputs[agentStartSincePlate].displayName = "Agent Start Since Plating"
+	inputs[amountWithUnits].input.Placeholder = "1d"
 	inputs[agentStartSincePlate].vfuns = inputs[agentDuration].vfuns
 
 	e := Agent{
@@ -165,7 +170,7 @@ func (a Agent) View() string {
 	}
 
 	return docStyle.Render(
-		titleStyle.Render(" Add a cell entry ") + "\n" +
+		titleStyle.Render(" Add an Agent ") + "\n" +
 			out +
 			getEntryStatus(a.Entry) + "\n\n" +
 			a.subErr + "\n\n")
