@@ -23,11 +23,11 @@ type Entry struct {
 
 // Field - a single unit of an entry
 type field struct {
-	displayName string // What the header of the field will be displayed as
 	input       textarea.Model
-	hasErr      bool
-	errMsg      string
-	vfuns       []func(s string) (string, bool)
+	displayName string                          // What the header of the field will be displayed as
+	vfuns       []func(s string) (string, bool) // Validator functions
+	hasErr      bool                            // Did the validator fail?
+	errMsg      string                          // Error messages of valid
 }
 
 // Sensible defaults for fields
@@ -51,6 +51,7 @@ func NewDefaultField() field {
 }
 
 // Sensible defaults for results table
+// TODO: use DB entry style as structure, not mimir entry style
 func NewDefaultTable(i []field) table.Model {
 	columns := []table.Column{
 		{Title: "id", Width: 4},

@@ -1,6 +1,8 @@
 package db
 
 import (
+	"strconv"
+
 	"gorm.io/gorm"
 )
 
@@ -13,4 +15,13 @@ type Cell struct {
 
 func (r *Repo) AddCell(c *Cell) {
 	r.DB.Create(&c)
+}
+
+func (c Cell) TableLineFromEntry() []string {
+	return []string{
+		strconv.FormatUint(uint64(c.ID), 10),
+		c.CellName,
+		c.ParentName,
+		c.Modifier,
+	}
 }

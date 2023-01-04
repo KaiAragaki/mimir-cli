@@ -1,18 +1,12 @@
 package tui
 
 import (
-	"strconv"
-
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
 )
-
-var debug string
-
-type errMsg error
 
 // Field names ------
 const (
@@ -89,6 +83,13 @@ func (c Cell) Init() tea.Cmd {
 
 func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(c.fields))
+
+	entry := c.makeDbEntry()
+	// Format the entries for how they're ACTUALLY going to be searched for
+	// and give a little preview in the table below
+
+	c = c.makeResTable(entry).(Cell)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -109,20 +110,9 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case tea.KeyCtrlS:
 			if noFieldHasError(c.Entry) {
-				// TODO implement generalized makeEntry
-				entry := makeCell(c.Entry)
 				var err error
 				if !c.findMode {
 					err = c.repo.Create(&entry).Error
-				} else {
-					var cell []db.Cell
-					shared.DB.Where(entry).First(&cell)
-					var rows []table.Row
-					for _, v := range cell {
-						row := []string{strconv.FormatUint(uint64(v.ID), 10), v.CellName, v.ParentName, v.Modifier}
-						rows = append(rows, row)
-					}
-					c.res.SetRows(rows)
 				}
 				if err != nil {
 					c.subErr = errorStyle.Render(err.Error())
@@ -147,15 +137,16 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		c.fields[i].input, cmds[i] = c.fields[i].input.Update(msg)
 	}
 
-	if !c.findMode {
-		var newRow []string
-		newRow = append(newRow, "")
-		for _, v := range c.fields {
-			newRow = append(newRow, v.input.Value())
-		}
+	// if !c.findMode {
+	// 	var newRow []string
+	// 	newRow = append(newRow, "")
+	// 	for _, v := range c.fields {
+	// 		newRow = append(newRow, v.input.Value())
+	// 	}
 
-		c.res.SetRows([]table.Row{newRow})
-	}
+	// 	c.res.SetRows([]table.Row{newRow})
+	// }
+	c.makeResTable(entry)
 
 	return c, nil
 }
@@ -202,11 +193,26 @@ func (c Cell) View() string {
 // UTILS ------------------
 
 // Constructor of db entry
-func makeCell(c Entry) db.Cell {
+func (c Cell) makeDbEntry() db.Cell {
 	return db.Cell{
 		Model:      gorm.Model{},
 		CellName:   c.fields[cellName].input.Value(),
 		ParentName: c.fields[parentName].input.Value(),
 		Modifier:   c.fields[modifier].input.Value(),
 	}
+}
+
+func (c Cell) makeResTable(entry db.Cell) tea.Model {
+	if c.findMode {
+		var cdb []db.Cell
+		shared.DB.Where(entry).Limit(20).Find(&cdb)
+		var rows []table.Row
+		for _, v := range cdb {
+			rows = append(rows, v.TableLineFromEntry())
+		}
+		c.res.SetRows(rows)
+	} else {
+		c.res.SetRows([]table.Row{entry.TableLineFromEntry()})
+	}
+	return c
 }

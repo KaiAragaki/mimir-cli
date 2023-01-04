@@ -5,6 +5,7 @@ import (
 
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
 )
@@ -35,9 +36,12 @@ func InitAgent(findMode bool) tea.Model {
 	inputs[agentName].input.Placeholder = "saracatinib"
 	inputs[agentName].vfuns = append(
 		inputs[agentName].vfuns,
-		valIsBlank,
 		valIsntLcNumUnderDash,
 	)
+
+	if !findMode {
+		inputs[agentName].vfuns = append(inputs[agentName].vfuns, valIsBlank)
+	}
 
 	inputs[amountWithUnits].displayName = "Amount with Units"
 	inputs[amountWithUnits].input.Placeholder = "100nM"
@@ -48,8 +52,12 @@ func InitAgent(findMode bool) tea.Model {
 		valStartsWithChar,
 	)
 
+	if !findMode {
+		inputs[amountWithUnits].vfuns = append(inputs[amountWithUnits].vfuns, valIsBlank)
+	}
+
 	inputs[agentDuration].displayName = "Agent Duration"
-	inputs[amountWithUnits].input.Placeholder = "1d2m5s"
+	inputs[agentDuration].input.Placeholder = "1d2m5s"
 	inputs[agentDuration].vfuns = append(
 		inputs[agentDuration].vfuns,
 		valIsBlank,
@@ -59,17 +67,25 @@ func InitAgent(findMode bool) tea.Model {
 		valNoTimeUnit,
 	)
 
+	if !findMode {
+		inputs[agentDuration].vfuns = append(inputs[agentDuration].vfuns, valIsBlank)
+	}
+
 	inputs[agentStartSincePlate].displayName = "Agent Start Since Plating"
-	inputs[amountWithUnits].input.Placeholder = "1d"
+	inputs[agentStartSincePlate].input.Placeholder = "1d"
 	inputs[agentStartSincePlate].vfuns = inputs[agentDuration].vfuns
+
+	resTable := db.MakeAgentTable()
 
 	e := Agent{
 		Entry: Entry{
-			fields:  inputs,
-			focused: 0,
-			ok:      false,
-			repo:    shared.DB,
-			subErr:  "",
+			fields:   inputs,
+			focused:  0,
+			ok:       false,
+			repo:     shared.DB,
+			subErr:   "",
+			findMode: findMode,
+			res:      resTable,
 		},
 	}
 
@@ -89,6 +105,8 @@ func (a Agent) Init() tea.Cmd {
 
 func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(a.fields))
+
+	entry := a.makeDbEntry()
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -109,9 +127,10 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case tea.KeyCtrlS:
 			if noFieldHasError(a.Entry) {
-				// TODO implement generalized makeEntry
-				entry := makeAgent(a.Entry)
-				err := a.repo.Create(&entry).Error
+				var err error
+				if !a.findMode {
+					err = a.repo.Create(&entry).Error
+				}
 				if err != nil {
 					a.subErr = errorStyle.Render(err.Error())
 				} else {
@@ -135,17 +154,31 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.fields[i].input, cmds[i] = a.fields[i].input.Update(msg)
 	}
 
+	a = a.makeResTable(entry).(Agent)
+
 	return a, nil
 }
 
 func (a Agent) View() string {
 	Validate(&a.Entry)
-	var out, header, err string
+	entry := a.makeDbEntry()
+	a = a.makeResTable(entry).(Agent)
+	var out, header, err, action string
 	for i, v := range a.fields {
 		if i == a.focused {
 			header = activeHeaderStyle.Render(" " + v.displayName)
 		} else {
 			header = headerStyle.Render(" " + v.displayName)
+		}
+
+		if !a.findMode {
+			if v.hasErr {
+				err = errorStyle.Render(v.errMsg)
+			} else {
+				err = okStyle.Render("✓")
+			}
+		} else {
+			err = ""
 		}
 
 		if v.hasErr {
@@ -169,21 +202,44 @@ func (a Agent) View() string {
 			v.input.View() + "\n\n"
 	}
 
+	if a.findMode {
+		action = "Find"
+	} else {
+		action = "Add"
+	}
+
 	return docStyle.Render(
-		titleStyle.Render(" Add an Agent ") + "\n" +
+		titleStyle.Render(" "+action+" an agent entry ") + "\n" +
 			out +
 			getEntryStatus(a.Entry) + "\n\n" +
-			a.subErr + "\n\n")
+			a.subErr + "\n\n" +
+			a.res.View())
 }
 
-func makeAgent(e Entry) db.Agent {
-	amt, amtUnits := parseUnits(e.fields[amountWithUnits].input.Value())
+// UTILS ------------------
+func (a Agent) makeDbEntry() db.Agent {
+	amt, amtUnits := parseUnits(a.fields[amountWithUnits].input.Value())
 	return db.Agent{
 		Model:                gorm.Model{},
-		AgentName:            e.fields[agentName].input.Value(),
+		AgentName:            a.fields[agentName].input.Value(),
 		Amount:               amt,
 		AmountUnits:          amtUnits,
-		AgentDuration:        parseTime(e.fields[agentDuration].input.Value()),
-		AgentStartSincePlate: parseTime(e.fields[agentStartSincePlate].input.Value()),
+		AgentDuration:        parseTime(a.fields[agentDuration].input.Value()),
+		AgentStartSincePlate: parseTime(a.fields[agentStartSincePlate].input.Value()),
 	}
+}
+
+func (a Agent) makeResTable(entry db.Agent) tea.Model {
+	if a.findMode {
+		var adb []db.Agent
+		shared.DB.Where(entry).Limit(20).Find(&adb)
+		var rows []table.Row
+		for _, v := range adb {
+			rows = append(rows, v.TableLineFromEntry())
+		}
+		a.res.SetRows(rows)
+	} else {
+		a.res.SetRows([]table.Row{entry.TableLineFromEntry()})
+	}
+	return a
 }

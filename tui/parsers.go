@@ -5,6 +5,10 @@ import (
 	"strconv"
 )
 
+func defaultParser(s string) string {
+	return s
+}
+
 // parseUnits should take a string (like, say, "40mg/mL") and convert it
 func parseUnits(s string) (float32, string) {
 	rAmt := regexp.MustCompile("^[0-9]*")
