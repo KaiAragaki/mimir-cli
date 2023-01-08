@@ -17,6 +17,14 @@ func valIsntLcAndNum(s string) (string, bool) {
 	return "", false
 }
 
+func valIsntLcNumUnder(s string) (string, bool) {
+	lcAndNum := regexp.MustCompile("^[a-z0-9_]*$")
+	if !lcAndNum.MatchString(s) {
+		return "May only include numbers, lowercase letters, and underscores", true
+	}
+	return "", false
+}
+
 func valIsntLcNumUnderDash(s string) (string, bool) {
 	lcNumUnderScoreDash := regexp.MustCompile("^[a-z0-9_-]*$")
 	if !lcNumUnderScoreDash.MatchString(s) {

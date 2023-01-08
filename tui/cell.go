@@ -33,7 +33,7 @@ func InitCell(findMode bool) tea.Model {
 	inputs[cellName].input.Placeholder = "umuc6src54"
 	inputs[cellName].vfuns = append(
 		inputs[cellName].vfuns,
-		valIsntLcAndNum,
+		valIsntLcNumUnder,
 	)
 
 	if !findMode {
@@ -44,7 +44,7 @@ func InitCell(findMode bool) tea.Model {
 	inputs[parentName].input.Placeholder = "umuc6"
 	inputs[parentName].vfuns = append(
 		inputs[parentName].vfuns,
-		valIsntLcAndNum,
+		valIsntLcNumUnder,
 	)
 
 	inputs[modifier].input.SetWidth(80)
