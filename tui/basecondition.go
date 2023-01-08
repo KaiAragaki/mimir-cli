@@ -37,7 +37,7 @@ func InitBaseCondition(findMode bool) tea.Model {
 	inputs[bcCellName].vfuns = append(
 		inputs[bcCellName].vfuns,
 		valIsBlank,
-		valIsntLcAndNum,
+		valIsntLcNumUnder,
 	)
 
 	inputs[bcSeedConc].displayName = "Seeding Concentration"
