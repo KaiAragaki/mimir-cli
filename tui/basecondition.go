@@ -5,6 +5,7 @@ import (
 
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
 )
@@ -72,11 +73,12 @@ func InitBaseCondition(findMode bool) tea.Model {
 
 	e := BaseCondition{
 		Entry: Entry{
-			fields:  inputs,
-			focused: 0,
-			ok:      false,
-			repo:    shared.DB,
-			subErr:  "",
+			repo:     shared.DB,
+			fields:   inputs,
+			focused:  0,
+			subErr:   "",
+			findMode: findMode,
+			res:      table.Model{},
 		},
 	}
 
@@ -177,7 +179,7 @@ func (bc BaseCondition) View() string {
 	}
 
 	return docStyle.Render(
-		titleStyle.Render(" Add a Base Condition ") + "\n" +
+		titleStyle.Render(" Add a Base Condition ") + "\n\n" +
 			out +
 			getEntryStatus(bc.Entry) + "\n\n" +
 			bc.subErr + "\n\n")

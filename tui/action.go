@@ -17,8 +17,13 @@ func InitAction() tea.Model {
 		item{title: "Add", desc: "Add an item"},
 		item{title: "Find", desc: "Look up, edit, or delete an item"},
 	}
+
+	l := list.NewModel(items, newCustomListDelegate(), 0, 0)
+	l.SetShowStatusBar(false)
+	l.Styles.Title = titleStyle.Padding(0, 1).Margin(0)
+
 	m := Action{
-		list:     list.NewModel(items, list.NewDefaultDelegate(), 0, 0),
+		list:     l,
 		selected: shared.Action,
 	}
 	m.list.Title = "Actions"

@@ -19,8 +19,12 @@ func InitTable(s string) tea.Model {
 		item{title: "Base Condition", desc: "How many cells, for how long, in what flask"},
 	}
 
+	l := list.NewModel(items, newCustomListDelegate(), 0, 0)
+	l.SetShowStatusBar(false)
+	l.Styles.Title = titleStyle.Padding(0, 1).Margin(0)
+
 	m := Table{
-		list:     list.New(items, list.NewDefaultDelegate(), 0, 0),
+		list:     l,
 		selected: s,
 	}
 	m.list.Title = "Tables"

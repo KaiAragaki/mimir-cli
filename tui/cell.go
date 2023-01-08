@@ -53,13 +53,12 @@ func InitCell(findMode bool) tea.Model {
 	inputs[modifier].input.SetHeight(5)
 	inputs[modifier].hasErr = false
 
-	resTable := NewDefaultTable(inputs)
+	resTable := db.MakeCellTable()
 
 	e := Cell{
 		Entry: Entry{
 			fields:   inputs,
 			focused:  0,
-			ok:       false,
 			repo:     shared.DB,
 			subErr:   "",
 			findMode: findMode,
@@ -137,15 +136,6 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		c.fields[i].input, cmds[i] = c.fields[i].input.Update(msg)
 	}
 
-	// if !c.findMode {
-	// 	var newRow []string
-	// 	newRow = append(newRow, "")
-	// 	for _, v := range c.fields {
-	// 		newRow = append(newRow, v.input.Value())
-	// 	}
-
-	// 	c.res.SetRows([]table.Row{newRow})
-	// }
 	c.makeResTable(entry)
 
 	return c, nil
@@ -153,6 +143,8 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (c Cell) View() string {
 	Validate(&c.Entry)
+	entry := c.makeDbEntry()
+	c = c.makeResTable(entry).(Cell)
 	var out, header, err, action string
 	for i, v := range c.fields {
 		if i == c.focused {
@@ -182,7 +174,7 @@ func (c Cell) View() string {
 	}
 
 	return docStyle.Render(
-		titleStyle.Render(" "+action+" a cell entry ") + "\n" +
+		titleStyle.Render(" "+action+" a cell entry ") + "\n\n" +
 			out +
 			getEntryStatus(c.Entry) + "\n\n" +
 			c.subErr + "\n\n" +

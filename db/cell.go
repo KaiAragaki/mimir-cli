@@ -3,6 +3,7 @@ package db
 import (
 	"strconv"
 
+	"github.com/charmbracelet/bubbles/table"
 	"gorm.io/gorm"
 )
 
@@ -24,4 +25,15 @@ func (c Cell) TableLineFromEntry() []string {
 		c.ParentName,
 		c.Modifier,
 	}
+}
+
+func MakeCellTable() table.Model {
+	columns := []table.Column{
+		{Title: "ID", Width: 4},
+		{Title: "Cell Name", Width: 15},
+		{Title: "Parent Name", Width: 15},
+		{Title: "Modifier", Width: 40},
+	}
+	t := table.New(table.WithColumns(columns))
+	return t
 }

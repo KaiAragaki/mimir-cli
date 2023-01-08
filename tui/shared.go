@@ -12,13 +12,13 @@ import (
 
 // Entry
 type Entry struct {
-	repo     *gorm.DB
-	fields   []field     // The fields
-	focused  int         // Which field is focused
-	ok       bool        // Are all entries valid?
-	subErr   string      // What error (if any) came from submitting to DB?
-	findMode bool        // Should blank entries be ignored?
-	res      table.Model // Stores find results or entry results
+	repo        *gorm.DB
+	fields      []field     // The fields
+	focused     int         // Which field is focused
+	subErr      string      // What error (if any) came from submitting to DB?
+	findMode    bool        // Should blank entries be ignored?
+	res         table.Model // Stores find results or entry results
+	entryStatus string      // What's good (or not) with the entry
 }
 
 // Field - a single unit of an entry

@@ -79,13 +79,13 @@ func InitAgent(findMode bool) tea.Model {
 
 	e := Agent{
 		Entry: Entry{
-			fields:   inputs,
-			focused:  0,
-			ok:       false,
-			repo:     shared.DB,
-			subErr:   "",
-			findMode: findMode,
-			res:      resTable,
+			repo:        shared.DB,
+			fields:      inputs,
+			focused:     0,
+			subErr:      "",
+			findMode:    findMode,
+			res:         resTable,
+			entryStatus: "",
 		},
 	}
 
@@ -132,15 +132,15 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					err = a.repo.Create(&entry).Error
 				}
 				if err != nil {
-					a.subErr = errorStyle.Render(err.Error())
+					a.entryStatus = errorStyle.Render(err.Error())
 				} else {
-					a.subErr = okStyle.Render("Submitted!")
+					a.entryStatus = okStyle.Render("Submitted!")
 				}
 			}
 		default:
 			// Only keep around submission errors
 			// until the next key that could possibly fix it is pressed
-			a.subErr = ""
+			a.entryStatus = getEntryStatus(a.Entry)
 		}
 		// Unfocus all inputs, then...
 		for i := range a.fields {
@@ -148,6 +148,8 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Focus just the one
 		a.fields[a.focused].input.Focus()
+		//case tea.WindowSizeMsg:
+		//shared.WindowSize = msg
 	}
 
 	for i := range a.fields {
@@ -155,6 +157,7 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	a = a.makeResTable(entry).(Agent)
+	a.res.SetStyles(customTableStyle)
 
 	return a, nil
 }
@@ -209,10 +212,9 @@ func (a Agent) View() string {
 	}
 
 	return docStyle.Render(
-		titleStyle.Render(" "+action+" an agent entry ") + "\n" +
+		titleStyle.Render(" "+action+" an agent entry ") + "\n\n" +
 			out +
-			getEntryStatus(a.Entry) + "\n\n" +
-			a.subErr + "\n\n" +
+			a.entryStatus + "\n" +
 			a.res.View())
 }
 
