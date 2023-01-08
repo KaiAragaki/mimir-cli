@@ -40,6 +40,6 @@ func MakeAgentTable() table.Model {
 		{Title: "Agent Duration", Width: 20},
 		{Title: "Agent Start Since Plate", Width: 30},
 	}
-	t := table.New(table.WithColumns(columns), table.WithHeight(10))
+	t := table.New(table.WithColumns(columns))
 	return t
 }

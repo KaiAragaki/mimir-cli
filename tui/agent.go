@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"gorm.io/gorm"
 )
 
@@ -109,6 +110,9 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(a.fields))
 
 	entry := a.makeDbEntry()
+
+	a = a.makeResTable(entry).(Agent)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -160,7 +164,6 @@ func (a Agent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	a = a.makeResTable(entry).(Agent)
 	a.res.SetStyles(customTableStyle)
-
 	return a, nil
 }
 
@@ -213,11 +216,11 @@ func (a Agent) View() string {
 		action = "Add"
 	}
 
+	leftCol := out + getEntryStatus(a.Entry)
+
 	return docStyle.Render(
 		titleStyle.Render(" "+action+" an agent entry ") + "\n\n" +
-			out +
-			a.entryStatus + "\n" +
-			a.res.View() + "\n\n" +
+			lipgloss.JoinHorizontal(0, wholeTableStyle.Render(leftCol), wholeTableStyle.Render(a.res.View())) + "\n\n" +
 			a.help.View(FieldEntryKeyMap),
 	)
 }

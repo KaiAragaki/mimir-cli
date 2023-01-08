@@ -47,10 +47,16 @@ var (
 	docStyle = lipgloss.NewStyle().Margin(1)
 
 	customTableStyle = table.Styles{
-		Header:   headerStyle,
-		Cell:     textAreaBlurredStyle.Text,
-		Selected: textAreaBlurredStyle.Text,
+		Header: lipgloss.NewStyle().
+			Bold(true),
+		Cell:     lipgloss.NewStyle(),
+		Selected: lipgloss.NewStyle().Bold(true).Foreground(accent),
 	}
+
+	wholeTableStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(accent).
+			Margin(0, 1)
 )
 
 func newCustomListDelegate() list.ItemDelegate {

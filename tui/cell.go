@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"gorm.io/gorm"
 )
 
@@ -48,7 +49,6 @@ func InitCell(findMode bool) tea.Model {
 		valIsntLcNumUnder,
 	)
 
-	inputs[modifier].input.SetWidth(80)
 	inputs[modifier].displayName = "Modifier"
 	inputs[modifier].input.Placeholder = `Cells were transduced with...`
 	inputs[modifier].input.SetHeight(5)
@@ -58,13 +58,14 @@ func InitCell(findMode bool) tea.Model {
 
 	e := Cell{
 		Entry: Entry{
-			fields:   inputs,
-			focused:  0,
-			repo:     shared.DB,
-			subErr:   "",
-			findMode: findMode,
-			res:      resTable,
-			help:     help.New(),
+			repo:        shared.DB,
+			fields:      inputs,
+			focused:     0,
+			subErr:      "",
+			findMode:    findMode,
+			res:         resTable,
+			entryStatus: "",
+			help:        help.New(),
 		},
 	}
 
@@ -124,7 +125,7 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			// Only keep around submission errors
 			// until the next key that could possibly fix it is pressed
-			c.subErr = ""
+			c.entryStatus = getEntryStatus(c.Entry)
 		}
 		// Unfocus all inputs, then...
 		for i := range c.fields {
@@ -139,7 +140,7 @@ func (c Cell) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	c.makeResTable(entry)
-
+	c.res.SetStyles(customTableStyle)
 	return c, nil
 }
 
@@ -175,12 +176,11 @@ func (c Cell) View() string {
 		action = "Add"
 	}
 
+	leftCol := out + getEntryStatus(c.Entry)
+
 	return docStyle.Render(
 		titleStyle.Render(" "+action+" a cell entry ") + "\n\n" +
-			out +
-			getEntryStatus(c.Entry) + "\n\n" +
-			c.subErr + "\n\n" +
-			c.res.View() + "\n\n" +
+			lipgloss.JoinHorizontal(0, wholeTableStyle.Render(leftCol), wholeTableStyle.Render(c.res.View())) + "\n\n" +
 			c.help.View(FieldEntryKeyMap),
 	)
 }
