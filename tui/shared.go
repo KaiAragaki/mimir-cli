@@ -4,8 +4,10 @@ import (
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/help"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
+
 )
 
 // --- STRUCTS ---
@@ -19,6 +21,7 @@ type Entry struct {
 	findMode    bool        // Should blank entries be ignored?
 	res         table.Model // Stores find results or entry results
 	entryStatus string      // What's good (or not) with the entry
+	help  help.Model // Keystrokes for this view
 }
 
 // Field - a single unit of an entry

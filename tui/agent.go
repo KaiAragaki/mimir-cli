@@ -5,6 +5,7 @@ import (
 
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
@@ -86,6 +87,7 @@ func InitAgent(findMode bool) tea.Model {
 			findMode:    findMode,
 			res:         resTable,
 			entryStatus: "",
+			help:        help.New(),
 		},
 	}
 
@@ -215,7 +217,9 @@ func (a Agent) View() string {
 		titleStyle.Render(" "+action+" an agent entry ") + "\n\n" +
 			out +
 			a.entryStatus + "\n" +
-			a.res.View())
+			a.res.View() + "\n\n" +
+			a.help.View(FieldEntryKeyMap),
+	)
 }
 
 // UTILS ------------------

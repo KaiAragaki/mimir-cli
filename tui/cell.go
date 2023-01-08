@@ -3,6 +3,7 @@ package tui
 import (
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
@@ -63,6 +64,7 @@ func InitCell(findMode bool) tea.Model {
 			subErr:   "",
 			findMode: findMode,
 			res:      resTable,
+			help:     help.New(),
 		},
 	}
 
@@ -178,7 +180,8 @@ func (c Cell) View() string {
 			out +
 			getEntryStatus(c.Entry) + "\n\n" +
 			c.subErr + "\n\n" +
-			c.res.View(),
+			c.res.View() + "\n\n" +
+			c.help.View(FieldEntryKeyMap),
 	)
 }
 
