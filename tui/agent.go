@@ -176,7 +176,7 @@ func (a Agent) View() string {
 		if i == a.focused {
 			header = activeHeaderStyle.Render(" " + v.displayName)
 		} else {
-			header = headerStyle.Render(" " + v.displayName)
+			header = " " + v.displayName
 		}
 
 		if !a.findMode {

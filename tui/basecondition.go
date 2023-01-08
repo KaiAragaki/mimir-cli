@@ -155,7 +155,7 @@ func (bc BaseCondition) View() string {
 		if i == bc.focused {
 			header = activeHeaderStyle.Render(" " + v.displayName)
 		} else {
-			header = headerStyle.Render(" " + v.displayName)
+			header = " " + v.displayName
 		}
 
 		if v.hasErr {

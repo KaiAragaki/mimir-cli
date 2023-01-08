@@ -153,7 +153,7 @@ func (c Cell) View() string {
 		if i == c.focused {
 			header = activeHeaderStyle.Render(" " + v.displayName)
 		} else {
-			header = headerStyle.Render(" " + v.displayName)
+			header = " " + v.displayName
 		}
 
 		if !c.findMode {

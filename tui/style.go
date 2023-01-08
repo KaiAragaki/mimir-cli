@@ -21,22 +21,12 @@ var (
 	okStyle          = lipgloss.NewStyle().Foreground(green)
 	placeholderStyle = lipgloss.NewStyle().Foreground(vDarkGray)
 
-	headerStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(white).
-			BorderLeft(true)
-
-	activeHeaderStyle = headerStyle.Copy().
+	activeHeaderStyle = lipgloss.NewStyle().
 				Foreground(accent).
-				Bold(true).
-				BorderForeground(accent)
+				Bold(true)
 
 	textAreaFocusedStyle = textarea.Style{
 		Base: activeHeaderStyle,
-	}
-
-	textAreaBlurredStyle = textarea.Style{
-		Base: headerStyle,
 	}
 
 	titleStyle = lipgloss.NewStyle().
