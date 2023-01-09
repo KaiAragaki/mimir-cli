@@ -6,6 +6,7 @@ import (
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"gorm.io/gorm"
 )
@@ -71,6 +72,8 @@ func InitBaseCondition(findMode bool) tea.Model {
 		valNoTimeUnit,
 	)
 
+	resTable := db.MakeBaseConditionTable()
+
 	e := BaseCondition{
 		Entry: Entry{
 			repo:        shared.DB,
@@ -78,6 +81,7 @@ func InitBaseCondition(findMode bool) tea.Model {
 			focused:     0,
 			subErr:      "",
 			findMode:    findMode,
+			res:         resTable,
 			entryStatus: "",
 			help:        help.New(),
 		},
@@ -99,6 +103,11 @@ func (bc BaseCondition) Init() tea.Cmd {
 
 func (bc BaseCondition) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd = make([]tea.Cmd, len(bc.fields))
+
+	entry := bc.makeDbEntry()
+
+	bc = bc.makeResTable(entry).(BaseCondition)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -188,11 +197,11 @@ func (bc BaseCondition) View() string {
 	)
 }
 
-func makeBaseCondition(e Entry) db.BaseCondition {
+func (bc BaseCondition) makeDbEntry() db.BaseCondition {
 	var cell []db.Cell
-	shared.DB.Where("cell_name = ?", e.fields[bcCellName].input.Value()).First(&cell)
-	amt, _ := parseUnits(e.fields[bcSeedConc].input.Value())
-	amtVol, _ := parseUnits(e.fields[bcSeedVol].input.Value())
+	shared.DB.Where("cell_name = ?", bc.fields[bcCellName].input.Value()).First(&cell)
+	amt, _ := parseUnits(bc.fields[bcSeedConc].input.Value())
+	amtVol, _ := parseUnits(bc.fields[bcSeedVol].input.Value())
 	// Look up Cell by name here. If you don't find it, ask user if they want to make one.
 	// If it does exist, fill out the info and store it in Cell.
 
@@ -204,4 +213,20 @@ func makeBaseCondition(e Entry) db.BaseCondition {
 		PlateFormFactor:      e.fields[bcPlateFormFactor].input.Value(),
 		GrowthDuration:       parseTime(e.fields[bcGrowthDuration].input.Value()),
 	}
+}
+
+func (bc BaseCondition) makeResTable(entry db.BaseCondition) tea.Model {
+	if bc.findMode {
+		var bcs []db.BaseCondition
+		shared.DB.Preload("Cells").Find(&bcs)
+		var rows []table.Row
+		for _, v := range bcs {
+			bc.res.append(rows, v.TableLineFromEntry())
+			rows = append(rows, v.TableLineFromEntry())
+		}
+		bc.res.SetRows(rows)
+	} else {
+		bc.res.SetRows([]table.Row{entry.TableLineFromEntry()})
+	}
+	return bc
 }
