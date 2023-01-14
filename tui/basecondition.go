@@ -6,8 +6,8 @@ import (
 	"github.com/KaiAragaki/mimir-cli/db"
 	"github.com/KaiAragaki/mimir-cli/shared"
 	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"gorm.io/gorm"
 )
 
@@ -128,9 +128,10 @@ func (bc BaseCondition) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case tea.KeyCtrlS:
 			if noFieldHasError(bc.Entry) {
-				// TODO implement generalized makeEntry
-				entry := makeBaseCondition(bc.Entry)
-				err := bc.repo.Create(&entry).Error
+				var err error
+				if !bc.findMode {
+					err = bc.repo.Create(&entry).Error
+				}
 				if err != nil {
 					bc.subErr = errorStyle.Render(err.Error())
 				} else {
@@ -140,7 +141,7 @@ func (bc BaseCondition) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			// Only keep around submission errors
 			// until the next key that could possibly fix it is pressed
-			bc.subErr = ""
+			bc.entryStatus = getEntryStatus(bc.Entry)
 		}
 		// Unfocus all inputs, then...
 		for i := range bc.fields {
@@ -154,17 +155,31 @@ func (bc BaseCondition) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		bc.fields[i].input, cmds[i] = bc.fields[i].input.Update(msg)
 	}
 
+	bc = bc.makeResTable(entry).(BaseCondition)
+	bc.res.SetStyles(customTableStyle)
 	return bc, nil
 }
 
 func (bc BaseCondition) View() string {
 	Validate(&bc.Entry)
-	var out, header, err string
+	entry := bc.makeDbEntry()
+	bc = bc.makeResTable(entry).(BaseCondition)
+	var out, header, err, action string
 	for i, v := range bc.fields {
 		if i == bc.focused {
 			header = activeHeaderStyle.Render(" " + v.displayName)
 		} else {
 			header = " " + v.displayName
+		}
+
+		if !bc.findMode {
+			if v.hasErr {
+				err = errorStyle.Render(v.errMsg)
+			} else {
+				err = okStyle.Render("✓")
+			}
+		} else {
+			err = ""
 		}
 
 		if v.hasErr {
@@ -188,11 +203,17 @@ func (bc BaseCondition) View() string {
 			v.input.View() + "\n\n"
 	}
 
+	if bc.findMode {
+		action = "Find"
+	} else {
+		action = "Add"
+	}
+
+	leftCol := out + getEntryStatus(bc.Entry)
+
 	return docStyle.Render(
-		titleStyle.Render(" Add a Base Condition ") + "\n\n" +
-			out +
-			getEntryStatus(bc.Entry) + "\n\n" +
-			bc.subErr + "\n\n" +
+		titleStyle.Render(" "+action+" a base condition entry ") + "\n\n" +
+			lipgloss.JoinHorizontal(0, wholeTableStyle.Render(leftCol), wholeTableStyle.Render(bc.res.View())) + "\n\n" +
 			bc.help.View(FieldEntryKeyMap),
 	)
 }
@@ -210,23 +231,20 @@ func (bc BaseCondition) makeDbEntry() db.BaseCondition {
 		Cells:                cell,
 		SeedingConcentration: amt,
 		SeedingVolume:        amtVol,
-		PlateFormFactor:      e.fields[bcPlateFormFactor].input.Value(),
-		GrowthDuration:       parseTime(e.fields[bcGrowthDuration].input.Value()),
+		PlateFormFactor:      bc.fields[bcPlateFormFactor].input.Value(),
+		GrowthDuration:       parseTime(bc.fields[bcGrowthDuration].input.Value()),
 	}
 }
 
 func (bc BaseCondition) makeResTable(entry db.BaseCondition) tea.Model {
 	if bc.findMode {
 		var bcs []db.BaseCondition
-		shared.DB.Preload("Cells").Find(&bcs)
-		var rows []table.Row
+		shared.DB.Where(entry).Preload("Cells").Find(&bcs)
 		for _, v := range bcs {
-			bc.res.append(rows, v.TableLineFromEntry())
-			rows = append(rows, v.TableLineFromEntry())
+			bc.res.SetRows(append(bc.res.Rows(), v.TableLineFromEntry()...))
 		}
-		bc.res.SetRows(rows)
 	} else {
-		bc.res.SetRows([]table.Row{entry.TableLineFromEntry()})
+		bc.res.SetRows(entry.TableLineFromEntry())
 	}
 	return bc
 }
